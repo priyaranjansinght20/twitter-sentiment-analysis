@@ -1,0 +1,291 @@
++*In[3]:*+
+[source, ipython3]
+----
+import tweepy # to gather tweeter data
+from textblob import TextBlob
+import pandas as pd
+import matplotlib.pyplot as plt
+import re
+from wordcloud import WordCloud
+plt.style.use('fivethirtyeight')
+
+----
+
+
++*In[4]:*+
+[source, ipython3]
+----
+APIKey= "n9HC6NJiP850fBbk7inRdgzGU"
+APISecretKey = "L09tZYPlUI3gutEC5JvltnsNDaI0ybXHdnAVTGtPNLHFM67u5b"
+AccessToken= "781543653739106304-iozfUoo4jKUsoSWguqhzN2kbqcXb1pZ"
+AccessTokenSecret= "bxIZedpmolwi7Hu23vjLq4TKnUHegYAK2rpS8qaRdEQFd"
+----
+
+
++*In[5]:*+
+[source, ipython3]
+----
+authenticate = tweepy.OAuthHandler(APIKey,APISecretKey)
+authenticate.set_access_token(AccessToken,AccessTokenSecret)
+api=tweepy.API(authenticate )
+----
+
+
++*In[36]:*+
+[source, ipython3]
+----
+posts=api.user_timeline(screen_name="Amazon ",count="100", lang="en",tweet_mode="extended")
+----
+
+
++*In[37]:*+
+[source, ipython3]
+----
+df= pd.DataFrame([tweet.full_text for tweet in posts],columns=['Tweets'])
+df
+----
+
+
++*Out[37]:*+
+----
+[cols=",",options="header",]
+|===
+| |Tweets
+|0 |Certified Prime Lover https://t.co/p3TlMxVQII
+|1 |@Ayush150603 Thanks. What does the status of y...
+|2 |@Ayush150603 Hi. We apologize for the frustrat...
+|3 |@Ayush150603 Thanks for confirming! Can you te...
+|4 |@Shivu_Baligar Apologies for the unpleasant ex...
+|... |...
+|95 |@BiggityBStacks We've done this at the gym. Ap...
+|96 |@laisha_art We're so glad we could help out wi...
+|97 |@m1cromanag3r We're sorry to hear that about t...
+|98 |@m1cromanag3r 🤣😂🤣 Thank you so much for talkin...
+|99 |@m1cromanag3r Your daughter sounds fun! 😂🌱🧟 Do...
+|===
+
+100 rows × 1 columns
+----
+
+
++*In[38]:*+
+[source, ipython3]
+----
+def cleanTxt(text):
+    text = re.sub('@[A-Za-z0-9]+','',text)
+    text = re.sub('#','',text)
+    text =re.sub('RT[\s]+','',text)
+    text = re.sub('https?:\/\/\$+','',text)
+    return text
+----
+
+
++*In[39]:*+
+[source, ipython3]
+----
+df['Tweets']= df['Tweets'].apply(cleanTxt)
+
+----
+
+
++*In[40]:*+
+[source, ipython3]
+----
+analysis=TextBlob("Today was the nice day ")
+----
+
+
++*In[41]:*+
+[source, ipython3]
+----
+analysis.sentiment
+----
+
+
++*Out[41]:*+
+----Sentiment(polarity=0.6, subjectivity=1.0)----
+
+
++*In[42]:*+
+[source, ipython3]
+----
+def getSubjectivity(text):
+    return TextBlob(text).sentiment.subjectivity
+
+# create a function to get the Polarity of all the tweets
+def getPolarity(text):
+    return TextBlob(text).sentiment.polarity
+
+# create 2 columns 'Subjectivity' and 'Polarity'
+df['Subjectivity']= df['Tweets'].apply(getSubjectivity)
+df['Polarity']= df['Tweets'].apply(getPolarity)
+----
+
+
++*In[43]:*+
+[source, ipython3]
+----
+allwords= ' '.join([i for i in df['Tweets']])
+clouds= WordCloud(width=500,height=300,random_state=0,max_font_size=100).generate(allwords)
+plt.imshow(clouds)
+plt.show()
+----
+
+
++*Out[43]:*+
+----
+![png](output_10_0.png)
+----
+
+
++*In[44]:*+
+[source, ipython3]
+----
+def getAnalysis(score):
+    if score<0:
+        return 'Negative'
+    elif score==0:
+        return 'Neutral'
+    else:
+        return 'Positive'
+
+df['Analysis']= df['Polarity'].apply(getAnalysis)
+df
+----
+
+
++*Out[44]:*+
+----
+[cols=",,,,",options="header",]
+|===
+| |Tweets |Subjectivity |Polarity |Analysis
+|0 |Certified Prime Lover https://t.co/p3TlMxVQII |0.000000 |0.000000
+|Neutral
+
+|1 |Thanks. What does the status of your order sh... |0.200000 |0.200000
+|Positive
+
+|2 |Hi. We apologize for the frustration! Just to... |0.000000 |0.000000
+|Neutral
+
+|3 |Thanks for confirming! Can you tell us a litt... |0.400000 |0.187500
+|Positive
+
+|4 |_Baligar Apologies for the unpleasant experien... |0.950000
+|-0.650000 |Negative
+
+|... |... |... |... |...
+
+|95 |We've done this at the gym. Apparently having... |0.701389
+|0.223611 |Positive
+
+|96 |_art We're so glad we could help out with your... |1.000000
+|0.781250 |Positive
+
+|97 |We're sorry to hear that about the doggos. 💜 ... |1.000000
+|-0.625000 |Negative
+
+|98 |🤣😂🤣 Thank you so much for talking games with ... |0.340000
+|0.170000 |Positive
+
+|99 |Your daughter sounds fun! 😂🌱🧟 Do you guys hav... |0.288889
+|0.388889 |Positive
+|===
+
+100 rows × 4 columns
+----
+
+
++*In[45]:*+
+[source, ipython3]
+----
+df[df['Analysis']=='Neutral']
+----
+
+
++*Out[45]:*+
+----
+[cols=",,,,",options="header",]
+|===
+| |Tweets |Subjectivity |Polarity |Analysis
+|0 |Certified Prime Lover https://t.co/p3TlMxVQII |0.0 |0.0 |Neutral
+
+|2 |Hi. We apologize for the frustration! Just to... |0.0 |0.0 |Neutral
+
+|10 |📦 + 🚚💨 + 🏡 + 🧠 = 🤯🤯🤯 |0.0 |0.0 |Neutral
+
+|15 |@__MindYaOWN Waiting is the hardest part! 📦 💨 |0.0 |0.0 |Neutral
+
+|16 |We'd like to look into this. Please provide y... |0.0 |0.0 |Neutral
+
+|20 |It looks like your housekeep-purrrs are paw-l... |0.0 |0.0 |Neutral
+
+|31 |It’s almost that time of year! What’s stirring... |0.0 |0.0
+|Neutral
+
+|53 |Pawsitvely purrecious! 😻 |0.0 |0.0 |Neutral
+
+|63 |We understand. We'd like to look into this wi... |0.0 |0.0 |Neutral
+
+|65 |We get your disappointment. Kindly confirm us... |0.6 |0.0 |Neutral
+
+|69 |Yes, please fill the needed information on th... |0.5 |0.0 |Neutral
+
+|74 |¡Nos encanta tu video! ¿Podemos usarlo? Para ... |0.0 |0.0 |Neutral
+
+|94 |🔟 tips for using to connect with your furry f... |0.0 |0.0 |Neutral
+|===
+----
+
+
++*In[46]:*+
+[source, ipython3]
+----
+df['Analysis'].value_counts()
+----
+
+
++*Out[46]:*+
+----Positive    77
+Neutral     13
+Negative    10
+Name: Analysis, dtype: int64----
+
+
++*In[47]:*+
+[source, ipython3]
+----
+df.shape
+----
+
+
++*Out[47]:*+
+----(100, 4)----
+
+
++*In[48]:*+
+[source, ipython3]
+----
+df['Analysis'].value_counts().plot(kind='bar')
+plt.show()
+----
+
+
++*Out[48]:*+
+----
+![png](output_15_0.png)
+----
+
+
++*In[ ]:*+
+[source, ipython3]
+----
+
+----
+
+
++*In[ ]:*+
+[source, ipython3]
+----
+
+----
